@@ -39,6 +39,10 @@ export const reservationService = {
 	getAll: () =>
 		withDemoFallback(() => http.get<ReservationDTO[]>(BASE), () => reservations.all()),
 
+	/** Client-side filter over `getAll`, so it works against any backend version. */
+	getByResource: async (resourceId: number) =>
+		(await reservationService.getAll()).filter((r) => r.resourceId === resourceId),
+
 	getById: (id: number) =>
 		withDemoFallback(
 			() => http.get<ReservationDTO>(`${BASE}/${id}`),

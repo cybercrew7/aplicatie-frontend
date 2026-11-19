@@ -21,6 +21,9 @@
 	--color-bordeaux: #5c1a24; /* secondary accent */
 	--color-brass: #b8965a; /* highlight / brass detail */
 
+	/* Status */
+	--color-forest: #2f5d46; /* available / confirmed — deep forest green */
+
 	/* Typography */
 	--font-serif: 'Playfair Display', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
 	--font-sans:
