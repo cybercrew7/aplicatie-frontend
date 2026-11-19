@@ -25,13 +25,7 @@ npm run dev            # http://localhost:5173
 
 ### Variabile de mediu (opțional)
 
-Creați `.env.local` în rădăcina proiectului. Fișierul este ignorat de Git, deci nu se comite.
-
-```sh
-VITE_API_BASE_URL=http://localhost:5000/api
-```
-
-Fără această variabilă, aplicația folosește `/api`. Dacă backend-ul nu răspunde, trece automat în **modul demo**, așa că puteți lucra la interfață și fără backend.
+Nu este necesară nicio variabilă: aplicația folosește `/api`, iar serverul Vite redirecționează aceste cereri către backend-ul de pe `http://localhost:5255` (proxy în `vite.config.ts`, fără CORS). Opțional, `VITE_API_BASE_URL` se poate seta în `.env.local` (ignorat de Git), dar o adresă absolută ocolește proxy-ul și necesită CORS pe backend. Dacă backend-ul nu răspunde, trece automat în **modul demo**, așa că puteți lucra la interfață și fără backend.
 
 ### Înainte de fiecare push
 

@@ -65,14 +65,10 @@ npm install          # instalează dependențele
 npm run dev          # server de dezvoltare pe http://localhost:5173
 ```
 
-În dezvoltare, cererile merg implicit la `/api`. Pentru a folosi un backend local, creați un fișier `.env.local`:
-
-```sh
-VITE_API_BASE_URL=http://localhost:5000/api
-```
+În dezvoltare, cererile merg la `/api`, iar serverul Vite le redirecționează (proxy, vezi [vite.config.ts](vite.config.ts)) către backend-ul ASP.NET Core de pe `http://localhost:5255`. Nu este nevoie de CORS și nici de `.env.local`.
 
 > Dacă backend-ul nu este pornit, aplicația intră automat în modul demo.
-> Când backend-ul rulează pe altă origine, acesta trebuie să permită CORS pentru `http://localhost:5173`.
+> Nu setați `VITE_API_BASE_URL` la o adresă absolută (ex. `http://localhost:5255/api`) — cererile ar ocoli proxy-ul și backend-ul ar trebui să permită CORS pentru `http://localhost:5173`.
 
 ### Comenzi utile
 
@@ -102,7 +98,7 @@ VITE_API_BASE_URL=http://localhost:5000/api
    sudo ln -s /etc/nginx/sites-available/aplicatie-frontend /etc/nginx/sites-enabled/
    sudo nginx -t && sudo systemctl reload nginx
    ```
-4. Backend-ul ASP.NET Core trebuie să asculte pe `http://localhost:5000`. Nginx redirecționează `/api/*` către el.
+4. Backend-ul ASP.NET Core trebuie să asculte pe `http://localhost:5255`. Nginx redirecționează `/api/*` către el.
 
 ---
 

@@ -24,5 +24,17 @@ export default defineConfig({
 				strict: true
 			})
 		})
-	]
+	],
+
+	// Dev server: forward /api to the local ASP.NET Core backend so the browser
+	// sees a same-origin request (no CORS). Production uses deploy/nginx.conf.
+	server: {
+		proxy: {
+			'/api': {
+				target: 'http://localhost:5255',
+				changeOrigin: true,
+				secure: false
+			}
+		}
+	}
 });

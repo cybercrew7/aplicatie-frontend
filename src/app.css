@@ -2,33 +2,67 @@
 @plugin '@tailwindcss/forms';
 
 /* ------------------------------------------------------------------
-   Design tokens — Classic European / Heritage Editorial
-   Every token below is emitted as a CSS custom property on :root
-   (e.g. var(--color-ink)) and generates Tailwind utilities
-   (bg-canvas, text-ink, border-hairline, font-serif, …).
+   Design tokens — European Architectural / Art Deco
+   Parisian interiors · Riva/Portofino restraint.
+
+   1. Raw palette (:root) — the single source of truth.
+   2. @theme — maps the palette onto Tailwind utilities
+      (bg-canvas, text-ink, border-gold, font-display, …) and keeps the
+      legacy names (--color-brass, --color-forest, --font-serif, …)
+      used across components pointing at the new values.
    ------------------------------------------------------------------ */
-@theme {
+:root {
 	/* Surfaces */
-	--color-canvas: #f8f6f1; /* warm ivory page background */
-	--color-surface: #ffffff; /* elevated cards, panels */
-	--color-hairline: #e2ddd2; /* 1px borders & rules */
+	--bg-canvas: #f6f3ec; /* warm travertine / alabaster */
+	--bg-surface: #ffffff; /* crisp porcelain card surface */
+	--bg-subtle: #efece4; /* muted stone tint — hover, slots */
+
+	/* Rules */
+	--border-hairline: #dcd6c8; /* architectural 1px rule */
+	--border-gold: #c5a059; /* brushed champagne brass */
 
 	/* Ink */
-	--color-ink: #132238; /* primary text & brand — deep royal navy */
-	--color-muted: #5a6270; /* secondary text */
+	--ink-primary: #0b192c; /* deep midnight navy */
+	--ink-secondary: #4a5568; /* slate charcoal */
 
-	/* Accents */
-	--color-bordeaux: #5c1a24; /* secondary accent */
-	--color-brass: #b8965a; /* highlight / brass detail */
-
-	/* Status */
-	--color-forest: #2f5d46; /* available / confirmed — deep forest green */
+	/* Accents / status */
+	--accent-bordeaux: #5e1924; /* heritage bordeaux — occupied, alerts */
+	--accent-emerald: #1b4332; /* deep forest green — available */
 
 	/* Typography */
-	--font-serif: 'Playfair Display', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
-	--font-sans:
-		'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial,
-		sans-serif;
+	--font-display: 'Cormorant Garamond', Georgia, serif;
+	--font-sans: 'DM Sans', -apple-system, sans-serif;
+
+	/* Architectural framing */
+	--radius-frame: 4px; /* micro-rounded corners */
+	--rule: 1px solid var(--border-hairline);
+	--rule-gold: 1px solid var(--border-gold);
+	--tracking-label: 0.14em; /* uppercase labels */
+	--tracking-display: -0.005em;
+}
+
+@theme {
+	/* New vocabulary */
+	--color-canvas: var(--bg-canvas);
+	--color-surface: var(--bg-surface);
+	--color-subtle: var(--bg-subtle);
+	--color-hairline: var(--border-hairline);
+	--color-gold: var(--border-gold);
+	--color-ink: var(--ink-primary);
+	--color-ink-secondary: var(--ink-secondary);
+	--color-bordeaux: var(--accent-bordeaux);
+	--color-emerald: var(--accent-emerald);
+
+	/* Legacy aliases — referenced throughout components */
+	--color-muted: var(--ink-secondary);
+	--color-brass: var(--border-gold);
+	--color-forest: var(--accent-emerald);
+
+	--font-display: 'Cormorant Garamond', Georgia, serif;
+	--font-serif: 'Cormorant Garamond', Georgia, serif;
+	--font-sans: 'DM Sans', -apple-system, sans-serif;
+
+	--radius-frame: 4px;
 }
 
 /* ------------------------------------------------------------------
@@ -43,8 +77,8 @@
 
 	body {
 		min-height: 100dvh;
-		background-color: var(--color-canvas);
-		color: var(--color-ink);
+		background-color: var(--bg-canvas);
+		color: var(--ink-primary);
 		font-family: var(--font-sans);
 		font-size: 1rem;
 		line-height: 1.6;
@@ -54,24 +88,46 @@
 		font-kerning: normal;
 	}
 
+	/* Display — Cormorant runs small, so headings carry a touch more weight */
 	h1,
 	h2,
 	h3,
 	h4 {
-		font-family: var(--font-serif);
+		font-family: var(--font-display);
 		font-weight: 600;
-		color: var(--color-ink);
-		line-height: 1.15;
-		letter-spacing: -0.01em;
+		color: var(--ink-primary);
+		line-height: 1.1;
+		letter-spacing: var(--tracking-display);
 		text-wrap: balance;
+		font-feature-settings:
+			'liga' 1,
+			'kern' 1;
 	}
 
+	h1 {
+		font-weight: 500;
+	}
+
+	em,
+	i {
+		font-style: italic;
+	}
+
+	/* Uppercase labels — refined, spaced, small */
 	h5,
-	h6 {
+	h6,
+	th,
+	legend {
 		font-family: var(--font-sans);
 		font-weight: 600;
-		letter-spacing: 0.08em;
+		font-size: 0.75rem;
+		letter-spacing: var(--tracking-label);
 		text-transform: uppercase;
+		color: var(--ink-secondary);
+	}
+
+	.uppercase {
+		letter-spacing: var(--tracking-label);
 	}
 
 	p {
@@ -80,33 +136,67 @@
 
 	small,
 	figcaption {
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 	}
 
 	a {
 		color: inherit;
-		text-decoration-color: var(--color-brass);
+		text-decoration-color: var(--border-gold);
 		text-underline-offset: 0.2em;
 		text-decoration-thickness: 1px;
 	}
 
 	hr {
-		border-color: var(--color-hairline);
+		border: 0;
+		border-top: var(--rule);
 	}
 
 	*,
 	::before,
 	::after {
-		border-color: var(--color-hairline);
+		border-color: var(--border-hairline);
+	}
+
+	/* Architectural framing — crisp hairlines, micro-rounded corners */
+	button,
+	input,
+	select,
+	textarea,
+	dialog {
+		border-radius: var(--radius-frame);
+	}
+
+	input,
+	select,
+	textarea {
+		border-color: var(--border-hairline);
+		background-color: var(--bg-surface);
+		color: var(--ink-primary);
+	}
+
+	input:focus,
+	select:focus,
+	textarea:focus {
+		border-color: var(--border-gold);
+		--tw-ring-color: var(--border-gold);
+	}
+
+	::placeholder {
+		color: var(--ink-secondary);
+		opacity: 0.7;
+	}
+
+	table {
+		border-collapse: collapse;
 	}
 
 	::selection {
-		background-color: var(--color-ink);
-		color: var(--color-canvas);
+		background-color: var(--ink-primary);
+		color: var(--bg-canvas);
 	}
 
 	:focus-visible {
-		outline: 2px solid var(--color-brass);
-		outline-offset: 2px;
+		outline: 1px solid var(--border-gold);
+		outline-offset: 3px;
 	}
 }
