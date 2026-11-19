@@ -1,2 +1,141 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<script lang="ts">
+	type Metric = { label: string; value: string; note: string };
+
+	// Placeholder values — replaced by API data in a later step.
+	const metrics: Metric[] = [
+		{ label: 'Săli disponibile', value: '—', note: 'din totalul înregistrat' },
+		{ label: 'Echipamente', value: '—', note: 'în inventar' },
+		{ label: 'Rezervări astăzi', value: '—', note: 'confirmate' },
+		{ label: 'În așteptare', value: '—', note: 'necesită aprobare' }
+	];
+</script>
+
+<svelte:head>
+	<title>Prezentare — Atrium</title>
+</svelte:head>
+
+<section class="intro">
+	<p class="eyebrow">Prezentare generală</p>
+	<h1 class="title">Gestiunea Sălilor și Echipamentelor</h1>
+	<div class="rule" aria-hidden="true"></div>
+	<p class="lead">
+		O privire de ansamblu asupra spațiilor, echipamentelor și rezervărilor instituției — totul într-un
+		singur loc.
+	</p>
+</section>
+
+<section class="metrics" aria-label="Indicatori principali">
+	<ul class="metric-grid">
+		{#each metrics as metric (metric.label)}
+			<li class="metric">
+				<h2 class="metric-label">{metric.label}</h2>
+				<p class="metric-value">{metric.value}</p>
+				<p class="metric-note">{metric.note}</p>
+			</li>
+		{/each}
+	</ul>
+</section>
+
+<style>
+	/* ---------- Intro ---------- */
+	.intro {
+		max-width: 48rem;
+	}
+
+	.eyebrow {
+		margin: 0;
+		font-size: 0.7rem;
+		font-weight: 500;
+		letter-spacing: 0.3em;
+		text-transform: uppercase;
+		color: var(--color-brass);
+	}
+
+	.title {
+		margin: 1rem 0 0;
+		font-size: 2.25rem;
+		line-height: 1.11;
+	}
+
+	.rule {
+		width: 4rem;
+		height: 1px;
+		margin-top: 1.5rem;
+		background-color: var(--color-brass);
+	}
+
+	.lead {
+		margin: 1.5rem 0 0;
+		font-size: 1.125rem;
+		line-height: 1.625;
+		color: var(--color-muted);
+	}
+
+	/* ---------- Metrics ---------- */
+	.metrics {
+		margin-top: 3.5rem;
+	}
+
+	.metric-grid {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 1px;
+		overflow: hidden;
+		border: 1px solid var(--color-hairline);
+		background-color: var(--color-hairline);
+	}
+
+	.metric {
+		padding: 1.5rem;
+		background-color: var(--color-surface);
+	}
+
+	.metric-label {
+		margin: 0;
+		font-family: var(--font-sans);
+		font-size: 0.7rem;
+		font-weight: 500;
+		line-height: 1.6;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: var(--color-muted);
+	}
+
+	.metric-value {
+		margin: 1rem 0 0;
+		font-family: var(--font-serif);
+		font-size: 2.25rem;
+		line-height: 2.5rem;
+		color: var(--color-ink);
+	}
+
+	.metric-note {
+		margin: 0.5rem 0 0;
+		font-size: 0.875rem;
+		line-height: 1.25rem;
+		color: var(--color-muted);
+	}
+
+	@media (min-width: 640px) {
+		.title {
+			font-size: 3rem;
+			line-height: 1;
+		}
+
+		.metric-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.metric {
+			padding: 1.75rem;
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.metric-grid {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+	}
+</style>
