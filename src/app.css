@@ -1,0 +1,109 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+
+/* ------------------------------------------------------------------
+   Design tokens — Classic European / Heritage Editorial
+   Every token below is emitted as a CSS custom property on :root
+   (e.g. var(--color-ink)) and generates Tailwind utilities
+   (bg-canvas, text-ink, border-hairline, font-serif, …).
+   ------------------------------------------------------------------ */
+@theme {
+	/* Surfaces */
+	--color-canvas: #f8f6f1; /* warm ivory page background */
+	--color-surface: #ffffff; /* elevated cards, panels */
+	--color-hairline: #e2ddd2; /* 1px borders & rules */
+
+	/* Ink */
+	--color-ink: #132238; /* primary text & brand — deep royal navy */
+	--color-muted: #5a6270; /* secondary text */
+
+	/* Accents */
+	--color-bordeaux: #5c1a24; /* secondary accent */
+	--color-brass: #b8965a; /* highlight / brass detail */
+
+	/* Typography */
+	--font-serif: 'Playfair Display', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+	--font-sans:
+		'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial,
+		sans-serif;
+}
+
+/* ------------------------------------------------------------------
+   Base defaults
+   ------------------------------------------------------------------ */
+@layer base {
+	html {
+		color-scheme: light;
+		-webkit-text-size-adjust: 100%;
+		text-size-adjust: 100%;
+	}
+
+	body {
+		min-height: 100dvh;
+		background-color: var(--color-canvas);
+		color: var(--color-ink);
+		font-family: var(--font-sans);
+		font-size: 1rem;
+		line-height: 1.6;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+		text-rendering: optimizeLegibility;
+		font-kerning: normal;
+	}
+
+	h1,
+	h2,
+	h3,
+	h4 {
+		font-family: var(--font-serif);
+		font-weight: 600;
+		color: var(--color-ink);
+		line-height: 1.15;
+		letter-spacing: -0.01em;
+		text-wrap: balance;
+	}
+
+	h5,
+	h6 {
+		font-family: var(--font-sans);
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	p {
+		text-wrap: pretty;
+	}
+
+	small,
+	figcaption {
+		color: var(--color-muted);
+	}
+
+	a {
+		color: inherit;
+		text-decoration-color: var(--color-brass);
+		text-underline-offset: 0.2em;
+		text-decoration-thickness: 1px;
+	}
+
+	hr {
+		border-color: var(--color-hairline);
+	}
+
+	*,
+	::before,
+	::after {
+		border-color: var(--color-hairline);
+	}
+
+	::selection {
+		background-color: var(--color-ink);
+		color: var(--color-canvas);
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--color-brass);
+		outline-offset: 2px;
+	}
+}
