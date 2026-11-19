@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { authStore, connectionMode, DEMO_USERS } from '#lib/stores/authStore.ts';
+	import { openBookingDrawer } from '#lib/stores/bookingStore.ts';
 	import type { UserRole } from '#lib/types/index.ts';
 
 	type NavLink = { href: string; label: string };
@@ -12,27 +13,26 @@
 		{ href: '/admin', label: 'Administrare' }
 	];
 
-	let menuOpen = $state(false);
-
-	function isActive(href: string): boolean {
-		const path = page.url.pathname;
-		return href === '/' ? path === '/' : path === href || path.startsWith(`${href}/`);
-	}
-
-	let accountOpen = $state(false);
-	let accountEl: HTMLDivElement | undefined = $state();
-
 	const ROLE_LABELS: Record<UserRole, string> = {
 		Student: 'Student',
 		Profesor: 'Profesor',
 		Admin: 'Administrator'
 	};
 
+	let menuOpen = $state(false);
+	let accountOpen = $state(false);
+	let accountEl: HTMLDivElement | undefined = $state();
+
 	const user = $derived($authStore.currentUser);
 	const initials = $derived(user ? initialsOf(user.name) : '?');
 	const modeLabel = $derived(
 		$connectionMode === 'api' ? 'Conectat la server' : 'Mod demonstrativ — date locale'
 	);
+
+	function isActive(href: string): boolean {
+		const path = page.url.pathname;
+		return href === '/' ? path === '/' : path === href || path.startsWith(`${href}/`);
+	}
 
 	function initialsOf(name: string): string {
 		const parts = name.trim().split(/\s+/);
@@ -51,6 +51,12 @@
 		accountOpen = false;
 	}
 
+	function quickBook() {
+		menuOpen = false;
+		accountOpen = false;
+		openBookingDrawer();
+	}
+
 	function onWindowClick(event: MouseEvent) {
 		if (accountOpen && accountEl && !accountEl.contains(event.target as Node)) {
 			accountOpen = false;
@@ -58,12 +64,15 @@
 	}
 
 	function onWindowKeydown(event: KeyboardEvent) {
-		if (event.key === 'Escape') accountOpen = false;
+		if (event.key === 'Escape') {
+			accountOpen = false;
+			menuOpen = false;
+		}
 	}
 
 	// Close menus whenever the route changes.
 	$effect(() => {
-		page.url.pathname;
+		void page.url.pathname;
 		menuOpen = false;
 		accountOpen = false;
 	});
@@ -81,6 +90,7 @@
 					type="button"
 					class="user-option"
 					class:compact={variant === 'mobile'}
+					class:active
 					role={variant === 'dropdown' ? 'menuitemradio' : undefined}
 					aria-checked={variant === 'dropdown' ? active : undefined}
 					aria-pressed={variant === 'mobile' ? active : undefined}
@@ -108,22 +118,23 @@
 {/snippet}
 
 <header class="navbar">
+	<div class="accent" aria-hidden="true"></div>
+
 	<nav class="bar" aria-label="Navigație principală">
 		<!-- Brand -->
-		<a href="/" class="brand">
-			<span class="wordmark">ATRIUM</span>
-			<span class="tagline">RESOURCE CONCIERGE</span>
+		<a href="/" class="brand" aria-label="ATRIUM — Gestiune Spații & Resurse, pagina principală">
+			<span class="monogram" aria-hidden="true">A</span>
+			<span class="brand-text">
+				<span class="wordmark">ATRIUM</span>
+				<span class="tagline">Gestiune Spații &amp; Resurse</span>
+			</span>
 		</a>
 
 		<!-- Desktop links -->
 		<ul class="links">
 			{#each links as link (link.href)}
 				<li>
-					<a
-						href={link.href}
-						class="link"
-						aria-current={isActive(link.href) ? 'page' : undefined}
-					>
+					<a href={link.href} class="link" aria-current={isActive(link.href) ? 'page' : undefined}>
 						{link.label}
 					</a>
 				</li>
@@ -132,6 +143,11 @@
 
 		<!-- Right side -->
 		<div class="actions">
+			<button type="button" class="quick-book" onclick={quickBook}>
+				<span class="plus" aria-hidden="true">+</span>
+				<span class="quick-label">Rezervare</span>
+			</button>
+
 			<div class="account-wrap" bind:this={accountEl}>
 				<button
 					type="button"
@@ -145,7 +161,10 @@
 						{initials}
 						<span class="status-dot" data-mode={$connectionMode} title={modeLabel}></span>
 					</span>
-					<span class="account-label">{user ? user.name : 'Alege un cont'}</span>
+					<span class="account-text">
+						<span class="account-name">{user ? user.name : 'Alege un cont'}</span>
+						<span class="account-role">{user ? ROLE_LABELS[user.role] : 'Vizitator'}</span>
+					</span>
 					<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
 						<path d="M7 10l5 5 5-5" />
 					</svg>
@@ -162,7 +181,7 @@
 							{:else}
 								<p class="head-name">Niciun utilizator activ</p>
 							{/if}
-							<p class="mode" data-mode={$connectionMode}>
+							<p class="mode">
 								<span class="status-dot inline" data-mode={$connectionMode} aria-hidden="true"></span>
 								{modeLabel}
 							</p>
@@ -180,18 +199,11 @@
 				aria-label={menuOpen ? 'Închide meniul' : 'Deschide meniul'}
 				onclick={() => (menuOpen = !menuOpen)}
 			>
-				<svg
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.5"
-					stroke-linecap="round"
-					aria-hidden="true"
-				>
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
 					{#if menuOpen}
 						<path d="M6 6l12 12M18 6L6 18" />
 					{:else}
-						<path d="M4 7h16M4 12h16M4 17h16" />
+						<path d="M4 8h16M4 16h16" />
 					{/if}
 				</svg>
 			</button>
@@ -204,11 +216,7 @@
 			<ul class="mobile-links">
 				{#each links as link (link.href)}
 					<li>
-						<a
-							href={link.href}
-							class="mobile-link"
-							aria-current={isActive(link.href) ? 'page' : undefined}
-						>
+						<a href={link.href} class="mobile-link" aria-current={isActive(link.href) ? 'page' : undefined}>
 							{link.label}
 						</a>
 					</li>
@@ -239,10 +247,21 @@
 		position: sticky;
 		top: 0;
 		z-index: 40;
-		border-bottom: 1px solid var(--color-hairline);
-		background-color: rgb(255 255 255 / 0.95);
-		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
+		border-bottom: 1px solid var(--border-hairline);
+		background-color: rgb(255 255 255 / 0.94);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+	}
+
+	.accent {
+		height: 2px;
+		background: linear-gradient(
+			90deg,
+			transparent 0%,
+			var(--border-gold) 18%,
+			var(--border-gold) 82%,
+			transparent 100%
+		);
 	}
 
 	.bar {
@@ -262,45 +281,82 @@
 		padding: 0;
 	}
 
+	button {
+		font: inherit;
+		cursor: pointer;
+	}
+
 	/* ---------- Brand ---------- */
 	.brand {
 		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		text-decoration: none;
+		flex-shrink: 0;
+	}
+
+	.monogram {
+		display: grid;
+		place-items: center;
+		width: 2.25rem;
+		height: 2.25rem;
+		border: 1px solid var(--border-gold);
+		font-family: var(--font-display);
+		font-size: 1.35rem;
+		font-weight: 600;
+		line-height: 1;
+		color: var(--ink-primary);
+		position: relative;
+	}
+
+	.monogram::after {
+		content: '';
+		position: absolute;
+		inset: 3px;
+		border: 1px solid color-mix(in srgb, var(--border-gold) 40%, transparent);
+	}
+
+	.brand-text {
+		display: flex;
 		flex-direction: column;
 		line-height: 1;
-		text-decoration: none;
 	}
 
 	.wordmark {
-		font-family: var(--font-serif);
-		font-size: 1.4rem;
+		font-family: var(--font-display);
+		font-size: 1.45rem;
 		font-weight: 600;
-		letter-spacing: 0.18em;
-		color: var(--color-ink);
+		letter-spacing: 0.2em;
+		color: var(--ink-primary);
 	}
 
 	.tagline {
-		margin-top: 0.25rem;
-		font-size: 0.6rem;
+		display: none;
+		margin-top: 0.3rem;
+		font-family: var(--font-display);
+		font-size: 0.8rem;
+		font-style: italic;
 		font-weight: 500;
-		letter-spacing: 0.32em;
-		color: var(--color-brass);
+		letter-spacing: 0.04em;
+		color: var(--border-gold);
 	}
 
 	/* ---------- Desktop links ---------- */
 	.links {
 		display: none;
 		align-items: center;
-		gap: 2rem;
+		gap: 1.75rem;
 	}
 
 	.link {
 		position: relative;
 		display: inline-block;
 		padding-block: 1.5rem;
-		font-size: 0.875rem;
-		line-height: 1.25rem;
-		letter-spacing: 0.025em;
-		color: var(--color-muted);
+		font-size: 0.78rem;
+		font-weight: 500;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--ink-secondary);
 		text-decoration: none;
 		transition: color 150ms ease;
 	}
@@ -311,19 +367,17 @@
 		inset-inline: 0;
 		bottom: -1px;
 		height: 1px;
-		background-color: var(--color-brass);
+		background-color: var(--border-gold);
 		transform: scaleX(0);
-		transform-origin: center;
 		transition: transform 300ms ease;
 	}
 
 	.link:hover {
-		color: var(--color-ink);
+		color: var(--ink-primary);
 	}
 
 	.link[aria-current='page'] {
-		font-weight: 500;
-		color: var(--color-ink);
+		color: var(--ink-primary);
 	}
 
 	.link[aria-current='page']::after {
@@ -334,136 +388,111 @@
 	.actions {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
+		gap: 0.625rem;
 	}
 
-	button {
-		font: inherit;
-		cursor: pointer;
+	.quick-book {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.45rem;
+		height: 2.5rem;
+		padding: 0 0.9rem;
+		border: 1px solid var(--ink-primary);
+		background-color: var(--ink-primary);
+		color: var(--bg-canvas);
+		font-size: 0.75rem;
+		font-weight: 600;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		transition:
+			background-color 150ms ease,
+			border-color 150ms ease;
+	}
+
+	.quick-book:hover {
+		background-color: var(--accent-bordeaux);
+		border-color: var(--accent-bordeaux);
+	}
+
+	.plus {
+		font-family: var(--font-display);
+		font-size: 1.25rem;
+		font-weight: 500;
+		line-height: 1;
+		color: var(--border-gold);
+	}
+
+	.quick-label {
+		display: none;
+	}
+
+	.account-wrap {
+		position: relative;
 	}
 
 	.account {
 		display: none;
 		align-items: center;
 		gap: 0.625rem;
-		padding: 0.375rem 1rem 0.375rem 0.375rem;
-		border: 1px solid var(--color-hairline);
+		height: 2.5rem;
+		padding: 0 0.875rem 0 0.25rem;
+		border: 1px solid var(--border-hairline);
 		border-radius: 9999px;
-		background-color: var(--color-surface);
-		font-size: 0.875rem;
-		line-height: 1.25rem;
-		color: var(--color-ink);
+		background-color: var(--bg-surface);
+		color: var(--ink-primary);
 		transition: border-color 150ms ease;
 	}
 
-	.account:hover {
-		border-color: var(--color-brass);
+	.account:hover,
+	.account[aria-expanded='true'] {
+		border-color: var(--border-gold);
 	}
 
-	.account-label {
-		letter-spacing: 0.025em;
-	}
-
-	.avatar {
+	.account-text {
 		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 1.75rem;
-		height: 1.75rem;
-		border-radius: 9999px;
-		background-color: var(--color-ink);
-		font-family: var(--font-serif);
-		font-size: 0.75rem;
-		line-height: 1;
-		color: var(--color-canvas);
+		flex-direction: column;
+		align-items: flex-start;
+		line-height: 1.15;
+		min-width: 0;
 	}
 
-	.toggle {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 2.5rem;
-		height: 2.5rem;
-		padding: 0;
-		border: 0;
-		border-radius: 9999px;
-		background: transparent;
-		color: var(--color-ink);
-		transition: background-color 150ms ease;
-	}
-
-	.toggle:hover {
-		background-color: var(--color-canvas);
-	}
-
-	.toggle svg {
-		width: 1.25rem;
-		height: 1.25rem;
-	}
-
-	/* ---------- Mobile menu ---------- */
-	.mobile-menu {
-		border-top: 1px solid var(--color-hairline);
-		background-color: var(--color-surface);
-	}
-
-	.mobile-links {
-		max-width: 72rem;
-		margin-inline: auto;
-		padding: 0.75rem 1rem;
-	}
-
-	.mobile-link {
-		display: flex;
-		align-items: center;
-		padding: 0.75rem 0 0.75rem 1rem;
-		border-left: 2px solid transparent;
-		font-size: 0.95rem;
-		color: var(--color-muted);
-		text-decoration: none;
-		transition: color 150ms ease;
-	}
-
-	.mobile-link:hover {
-		color: var(--color-ink);
-	}
-
-	.mobile-link[aria-current='page'] {
-		border-left-color: var(--color-brass);
+	.account-name {
+		max-width: 9rem;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		font-size: 0.8rem;
 		font-weight: 500;
-		color: var(--color-ink);
 	}
 
-	.mobile-account {
-		max-width: 72rem;
-		margin-inline: auto;
-		padding: 1rem;
-		border-top: 1px solid var(--color-hairline);
-	}
-
-	.mobile-account-inner {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.625rem;
-		font-size: 0.875rem;
-		color: var(--color-ink);
-	}
-
-	/* ---------- Account dropdown ---------- */
-	.account-wrap {
-		position: relative;
+	.account-role {
+		font-size: 0.6rem;
+		font-weight: 600;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--border-gold);
 	}
 
 	.avatar {
 		position: relative;
 		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		border-radius: 9999px;
+		background-color: var(--ink-primary);
+		font-family: var(--font-display);
+		font-size: 0.8rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		line-height: 1;
+		color: var(--bg-canvas);
 	}
 
 	.avatar.small {
-		width: 2rem;
-		height: 2rem;
 		font-size: 0.7rem;
-		letter-spacing: 0.04em;
 	}
 
 	.status-dot {
@@ -472,13 +501,13 @@
 		bottom: -1px;
 		width: 0.55rem;
 		height: 0.55rem;
-		border: 2px solid var(--color-surface);
+		border: 2px solid var(--bg-surface);
 		border-radius: 9999px;
-		background-color: var(--color-api, #3f7d5a);
+		background-color: var(--accent-emerald);
 	}
 
 	.status-dot[data-mode='demo'] {
-		background-color: var(--color-brass);
+		background-color: var(--border-gold);
 	}
 
 	.status-dot.inline {
@@ -492,34 +521,41 @@
 	.chevron {
 		width: 0.9rem;
 		height: 0.9rem;
-		margin-left: -0.25rem;
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 		transition: transform 200ms ease;
-	}
-
-	.account[aria-expanded='true'] {
-		border-color: var(--color-brass);
 	}
 
 	.account[aria-expanded='true'] .chevron {
 		transform: rotate(180deg);
 	}
 
-	.account-label {
-		max-width: 11rem;
-		overflow: hidden;
-		white-space: nowrap;
-		text-overflow: ellipsis;
+	.toggle {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		padding: 0;
+		border: 1px solid var(--border-hairline);
+		background: transparent;
+		color: var(--ink-primary);
 	}
 
+	.toggle svg {
+		width: 1.25rem;
+		height: 1.25rem;
+	}
+
+	/* ---------- Dropdown ---------- */
 	.dropdown {
 		position: absolute;
-		top: calc(100% + 0.625rem);
+		top: calc(100% + 0.75rem);
 		right: 0;
-		width: 18rem;
-		border: 1px solid var(--color-hairline);
-		background-color: var(--color-surface);
-		box-shadow: 0 18px 40px -24px rgb(19 34 56 / 0.35);
+		width: 18.5rem;
+		border: 1px solid var(--border-hairline);
+		border-top: 2px solid var(--border-gold);
+		background-color: var(--bg-surface);
+		box-shadow: 0 24px 48px -28px rgb(11 25 44 / 0.4);
 		animation: drop-in 160ms ease-out;
 	}
 
@@ -532,7 +568,7 @@
 
 	.dropdown-head {
 		padding: 1.125rem 1.25rem 1rem;
-		border-bottom: 1px solid var(--color-hairline);
+		border-bottom: 1px solid var(--border-hairline);
 	}
 
 	.dropdown-head p {
@@ -540,47 +576,48 @@
 	}
 
 	.head-name {
-		font-family: var(--font-serif);
-		font-size: 1.05rem;
-		color: var(--color-ink);
+		font-family: var(--font-display);
+		font-size: 1.2rem;
+		font-weight: 600;
+		color: var(--ink-primary);
 	}
 
-	.head-meta {
-		margin-top: 0.125rem !important;
+	.dropdown-head .head-meta {
+		margin-top: 0.125rem;
 		font-size: 0.8rem;
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 		overflow-wrap: anywhere;
 	}
 
-	.role-badge {
+	.dropdown-head .role-badge {
 		display: inline-block;
-		margin-top: 0.625rem !important;
+		margin-top: 0.625rem;
 		padding: 0.125rem 0.5rem;
-		border: 1px solid var(--color-brass);
-		font-size: 0.625rem;
-		font-weight: 500;
+		border: 1px solid var(--border-gold);
+		font-size: 0.6rem;
+		font-weight: 600;
 		letter-spacing: 0.2em;
 		text-transform: uppercase;
-		color: var(--color-ink);
+		color: var(--ink-primary);
 	}
 
-	.mode {
+	.dropdown-head .mode {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		margin-top: 0.75rem !important;
+		margin-top: 0.75rem;
 		font-size: 0.75rem;
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 	}
 
 	.list-heading {
 		margin: 0;
 		padding: 0.875rem 1.25rem 0.375rem;
-		font-size: 0.625rem;
-		font-weight: 500;
+		font-size: 0.6rem;
+		font-weight: 600;
 		letter-spacing: 0.24em;
 		text-transform: uppercase;
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 	}
 
 	.user-list {
@@ -594,14 +631,19 @@
 		width: 100%;
 		padding: 0.5rem 1.25rem;
 		border: 0;
+		border-radius: 0;
 		background: transparent;
 		text-align: left;
-		color: var(--color-ink);
+		color: var(--ink-primary);
 		transition: background-color 150ms ease;
 	}
 
 	.user-option:hover {
-		background-color: var(--color-canvas);
+		background-color: var(--bg-canvas);
+	}
+
+	.user-option.active .avatar {
+		box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 3px var(--border-gold);
 	}
 
 	.user-option.compact {
@@ -620,15 +662,15 @@
 	}
 
 	.option-role {
-		font-size: 0.75rem;
-		color: var(--color-muted);
+		font-size: 0.72rem;
+		color: var(--ink-secondary);
 	}
 
 	.check {
 		width: 1rem;
 		height: 1rem;
 		margin-left: auto;
-		color: var(--color-brass);
+		color: var(--border-gold);
 	}
 
 	.logout {
@@ -636,26 +678,68 @@
 		width: 100%;
 		padding: 0.75rem 1.25rem;
 		border: 0;
-		border-top: 1px solid var(--color-hairline);
+		border-top: 1px solid var(--border-hairline);
+		border-radius: 0;
 		background: transparent;
 		text-align: left;
 		font-size: 0.8rem;
 		letter-spacing: 0.04em;
-		color: var(--color-bordeaux);
+		color: var(--accent-bordeaux);
 	}
 
 	.logout:hover {
-		background-color: var(--color-canvas);
+		background-color: var(--bg-canvas);
+	}
+
+	/* ---------- Mobile menu ---------- */
+	.mobile-menu {
+		border-top: 1px solid var(--border-hairline);
+		background-color: var(--bg-surface);
+	}
+
+	.mobile-links {
+		max-width: 72rem;
+		margin-inline: auto;
+		padding: 0.75rem 1rem;
+	}
+
+	.mobile-link {
+		display: flex;
+		align-items: center;
+		padding: 0.75rem 0 0.75rem 1rem;
+		border-left: 2px solid transparent;
+		font-family: var(--font-display);
+		font-size: 1.15rem;
+		font-weight: 500;
+		color: var(--ink-secondary);
+		text-decoration: none;
+	}
+
+	.mobile-link[aria-current='page'] {
+		border-left-color: var(--border-gold);
+		color: var(--ink-primary);
+	}
+
+	.mobile-account {
+		max-width: 72rem;
+		margin-inline: auto;
+		padding: 1rem;
+		border-top: 1px solid var(--border-hairline);
+	}
+
+	.mobile-account-inner {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.625rem;
+		font-size: 0.875rem;
+		color: var(--ink-primary);
 	}
 
 	.mobile-users {
 		margin-top: 0.75rem;
 	}
 
-	.mobile-users .list-heading {
-		padding-inline: 0;
-	}
-
+	.mobile-users .list-heading,
 	.mobile-users .logout {
 		padding-inline: 0;
 	}
@@ -672,12 +756,6 @@
 		border: 0;
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.dropdown {
-			animation: none;
-		}
-	}
-
 	/* ---------- Breakpoints ---------- */
 	@media (min-width: 640px) {
 		.bar {
@@ -688,8 +766,8 @@
 			display: inline-flex;
 		}
 
-		.mobile-links {
-			padding-inline: 1.5rem;
+		.quick-label {
+			display: inline;
 		}
 
 		.mobile-account {
@@ -697,7 +775,7 @@
 		}
 	}
 
-	@media (min-width: 768px) {
+	@media (min-width: 900px) {
 		.links {
 			display: flex;
 		}
@@ -708,9 +786,24 @@
 		}
 	}
 
-	@media (min-width: 1024px) {
+	@media (min-width: 1100px) {
 		.bar {
 			padding-inline: 2rem;
+		}
+
+		.tagline {
+			display: block;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.dropdown {
+			animation: none;
+		}
+
+		.link::after,
+		.chevron {
+			transition: none;
 		}
 	}
 </style>

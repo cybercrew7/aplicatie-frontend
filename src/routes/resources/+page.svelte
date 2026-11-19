@@ -5,7 +5,10 @@
 	import ResourceCard from '#lib/components/ResourceCard.svelte';
 	import ResourceDetailModal from '#lib/components/ResourceDetailModal.svelte';
 	import { connectionMode } from '#lib/stores/authStore.ts';
+	import { openBookingDrawer } from '#lib/stores/bookingStore.ts';
+	import { loadReservations, reservationsStore } from '#lib/stores/reservationStore.ts';
 	import type { ResourceDTO, ResourceType } from '#lib/types/index.ts';
+	import { isFreeNow } from '#lib/utils/schedule.ts';
 
 	type TypeFilter = 'All' | ResourceType;
 
@@ -24,6 +27,17 @@
 	let availableOnly = $state(false);
 
 	let selected = $state<ResourceDTO | null>(null);
+	let now = $state(Date.now());
+
+	const reservations = $derived($reservationsStore);
+
+	/** Bookable at this very moment; until the schedule loads, fall back to the resource flag. */
+	function availableNow(r: ResourceDTO): boolean {
+		if (!r.isAvailable) return false;
+		return reservations ? isFreeNow(r.id, reservations, now) : true;
+	}
+
+	const freeNowCount = $derived(resources?.filter(availableNow).length ?? 0);
 
 	/** Case- and diacritic-insensitive, so "sala" matches "Sală". */
 	function normalize(text: string): string {
@@ -45,7 +59,7 @@
 
 		return resources.filter((r) => {
 			if (typeFilter !== 'All' && r.type !== typeFilter) return false;
-			if (availableOnly && !r.isAvailable) return false;
+			if (availableOnly && !availableNow(r)) return false;
 			if (capacityApplies && (r.capacity ?? 0) < (minCapacity ?? 0)) return false;
 			if (!q) return true;
 			return [r.name, r.description, r.location, r.inventoryCode].some(
@@ -66,12 +80,18 @@
 	}
 
 	// Client-only: the relative `/api` URL is resolved by the browser (and Nginx).
-	onMount(async () => {
-		try {
-			resources = await resourceService.getAll();
-		} catch (e) {
-			error = e instanceof ApiError ? e.message : 'Resursele nu au putut fi încărcate.';
-		}
+	onMount(() => {
+		resourceService
+			.getAll()
+			.then((rows) => (resources = rows))
+			.catch((e: unknown) => {
+				error = e instanceof ApiError ? e.message : 'Resursele nu au putut fi încărcate.';
+			});
+		// The timelines degrade to a loading state if this fails; the catalogue still works.
+		loadReservations(true).catch(() => {});
+
+		const timer = setInterval(() => (now = Date.now()), 60_000);
+		return () => clearInterval(timer);
 	});
 </script>
 
@@ -86,8 +106,19 @@
 	<div class="rule" aria-hidden="true"></div>
 	<p class="lead">
 		Consultați spațiile și dotările instituției, verificați programul zilei și rezervați direct
-		resursa potrivită.
+		din cronologia fiecărei resurse — un clic pe o oră liberă deschide rezervarea.
 	</p>
+	<div class="intro-actions">
+		<button type="button" class="cta" onclick={() => openBookingDrawer()}>
+			<span class="cta-plus" aria-hidden="true">+</span> Rezervare nouă
+		</button>
+		{#if resources && reservations}
+			<p class="live">
+				<span class="live-dot" aria-hidden="true"></span>
+				{freeNowCount} din {resources.length} resurse libere acum
+			</p>
+		{/if}
+	</div>
 </section>
 
 <!-- ---------- Filter toolbar ---------- -->
@@ -136,7 +167,7 @@
 		<label class="switch">
 			<input type="checkbox" role="switch" bind:checked={availableOnly} />
 			<span class="track" aria-hidden="true"><span class="thumb"></span></span>
-			<span class="switch-label">Doar disponibile</span>
+			<span class="switch-label">Disponibile acum</span>
 		</label>
 	</div>
 </search>
@@ -161,7 +192,7 @@
 	{#if error}
 		<p class="state error" role="alert">{error}</p>
 	{:else if resources === null}
-		<ul class="grid" aria-busy="true">
+		<ul class="catalog" aria-busy="true">
 			{#each { length: 6 }, i (i)}
 				<li class="skeleton" aria-hidden="true">
 					<span class="bone short"></span>
@@ -178,10 +209,10 @@
 			<button type="button" class="reset" onclick={resetFilters}>Resetează filtrele</button>
 		</div>
 	{:else}
-		<ul class="grid">
+		<ul class="catalog">
 			{#each filtered as resource (resource.id)}
 				<li>
-					<ResourceCard {resource} ondetails={(r) => (selected = r)} />
+					<ResourceCard {resource} {reservations} {now} ondetails={(r) => (selected = r)} />
 				</li>
 			{/each}
 		</ul>
@@ -209,7 +240,7 @@
 		font-weight: 500;
 		letter-spacing: 0.3em;
 		text-transform: uppercase;
-		color: var(--color-brass);
+		color: var(--border-gold);
 	}
 
 	.title {
@@ -222,14 +253,68 @@
 		width: 4rem;
 		height: 1px;
 		margin-top: 1.5rem;
-		background-color: var(--color-brass);
+		background-color: var(--border-gold);
 	}
 
 	.lead {
 		margin: 1.5rem 0 0;
 		font-size: 1.125rem;
 		line-height: 1.625;
-		color: var(--color-muted);
+		color: var(--ink-secondary);
+	}
+
+	.intro-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 1rem 1.5rem;
+		margin-top: 2rem;
+	}
+
+	.cta {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-height: 2.75rem;
+		padding: 0 1.25rem;
+		border: 1px solid var(--ink-primary);
+		background-color: var(--ink-primary);
+		color: var(--bg-canvas);
+		font-size: 0.75rem;
+		font-weight: 600;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		box-shadow: inset 0 -2px 0 var(--border-gold);
+		transition: background-color 150ms ease;
+	}
+
+	.cta:hover {
+		background-color: var(--accent-bordeaux);
+		border-color: var(--accent-bordeaux);
+	}
+
+	.cta-plus {
+		font-family: var(--font-display);
+		font-size: 1.25rem;
+		line-height: 1;
+		color: var(--border-gold);
+	}
+
+	.live {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0;
+		font-size: 0.85rem;
+		color: var(--ink-secondary);
+	}
+
+	.live-dot {
+		width: 0.5rem;
+		height: 0.5rem;
+		border-radius: 9999px;
+		background-color: var(--accent-emerald);
+		box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-emerald) 15%, transparent);
 	}
 
 	/* ---------- Toolbar ---------- */
@@ -239,8 +324,8 @@
 		gap: 1.25rem;
 		margin-top: 3rem;
 		padding: 1.25rem;
-		border: 1px solid var(--color-hairline);
-		background-color: var(--color-surface);
+		border: 1px solid var(--border-hairline);
+		background-color: var(--bg-surface);
 	}
 
 	button {
@@ -250,7 +335,7 @@
 
 	.segmented {
 		display: flex;
-		border-bottom: 1px solid var(--color-hairline);
+		border-bottom: 1px solid var(--border-hairline);
 		overflow-x: auto;
 		scrollbar-width: none;
 	}
@@ -267,7 +352,7 @@
 		font-size: 0.9rem;
 		letter-spacing: 0.02em;
 		white-space: nowrap;
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 		transition: color 150ms ease;
 	}
 
@@ -277,18 +362,18 @@
 		inset-inline: 0;
 		bottom: -1px;
 		height: 2px;
-		background-color: var(--color-brass);
+		background-color: var(--border-gold);
 		transform: scaleX(0);
 		transition: transform 250ms ease;
 	}
 
 	.segment:hover {
-		color: var(--color-ink);
+		color: var(--ink-primary);
 	}
 
 	.segment[aria-pressed='true'] {
 		font-weight: 500;
-		color: var(--color-ink);
+		color: var(--ink-primary);
 	}
 
 	.segment[aria-pressed='true']::after {
@@ -298,19 +383,19 @@
 	.count {
 		min-width: 1.5rem;
 		padding: 0 0.375rem;
-		border: 1px solid var(--color-hairline);
+		border: 1px solid var(--border-hairline);
 		border-radius: 9999px;
 		font-size: 0.7rem;
 		font-weight: 500;
 		font-variant-numeric: tabular-nums;
 		text-align: center;
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 	}
 
 	.segment[aria-pressed='true'] .count {
-		border-color: var(--color-ink);
-		background-color: var(--color-ink);
-		color: var(--color-canvas);
+		border-color: var(--ink-primary);
+		background-color: var(--ink-primary);
+		color: var(--bg-canvas);
 	}
 
 	.controls {
@@ -331,7 +416,7 @@
 		font-weight: 600;
 		letter-spacing: 0.22em;
 		text-transform: uppercase;
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 	}
 
 	.input-wrap {
@@ -340,23 +425,23 @@
 		gap: 0.5rem;
 		height: 2.75rem;
 		padding-inline: 0.875rem;
-		border: 1px solid var(--color-hairline);
-		background-color: var(--color-canvas);
+		border: 1px solid var(--border-hairline);
+		background-color: var(--bg-canvas);
 		transition:
 			border-color 150ms ease,
 			background-color 150ms ease;
 	}
 
 	.input-wrap:focus-within {
-		border-color: var(--color-brass);
-		background-color: var(--color-surface);
+		border-color: var(--border-gold);
+		background-color: var(--bg-surface);
 	}
 
 	.input-wrap svg {
 		flex-shrink: 0;
 		width: 1.1rem;
 		height: 1.1rem;
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 	}
 
 	.input-wrap input {
@@ -368,7 +453,7 @@
 		background: transparent;
 		font: inherit;
 		font-size: 0.9rem;
-		color: var(--color-ink);
+		color: var(--ink-primary);
 		box-shadow: none;
 	}
 
@@ -378,13 +463,13 @@
 	}
 
 	.input-wrap input::placeholder {
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 		opacity: 0.75;
 	}
 
 	.suffix {
 		font-size: 0.8rem;
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 	}
 
 	/* ---------- Switch ---------- */
@@ -411,9 +496,9 @@
 		position: relative;
 		width: 2.5rem;
 		height: 1.375rem;
-		border: 1px solid var(--color-hairline);
+		border: 1px solid var(--border-hairline);
 		border-radius: 9999px;
-		background-color: var(--color-canvas);
+		background-color: var(--bg-canvas);
 		transition:
 			background-color 200ms ease,
 			border-color 200ms ease;
@@ -426,30 +511,30 @@
 		width: calc(1.375rem - 6px);
 		height: calc(1.375rem - 6px);
 		border-radius: 9999px;
-		background-color: var(--color-muted);
+		background-color: var(--ink-secondary);
 		transition:
 			transform 200ms ease,
 			background-color 200ms ease;
 	}
 
 	.switch input:checked + .track {
-		border-color: var(--color-forest);
-		background-color: var(--color-forest);
+		border-color: var(--accent-emerald);
+		background-color: var(--accent-emerald);
 	}
 
 	.switch input:checked + .track .thumb {
-		background-color: var(--color-surface);
+		background-color: var(--bg-surface);
 		transform: translateX(1.125rem);
 	}
 
 	.switch input:focus-visible + .track {
-		outline: 2px solid var(--color-brass);
+		outline: 2px solid var(--border-gold);
 		outline-offset: 2px;
 	}
 
 	.switch-label {
 		font-size: 0.875rem;
-		color: var(--color-ink);
+		color: var(--ink-primary);
 	}
 
 	/* ---------- Results ---------- */
@@ -472,7 +557,7 @@
 		font-weight: 500;
 		letter-spacing: 0.2em;
 		text-transform: uppercase;
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 	}
 
 	.reset {
@@ -481,13 +566,13 @@
 		background: transparent;
 		font-size: 0.8rem;
 		letter-spacing: 0.02em;
-		color: var(--color-bordeaux);
+		color: var(--accent-bordeaux);
 		text-decoration: underline;
-		text-decoration-color: var(--color-brass);
+		text-decoration-color: var(--border-gold);
 		text-underline-offset: 0.25em;
 	}
 
-	.grid {
+	.catalog {
 		list-style: none;
 		margin: 0;
 		padding: 0;
@@ -500,15 +585,15 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-		min-height: 17rem;
+		min-height: 22rem;
 		padding: 1.5rem;
-		border: 1px solid var(--color-hairline);
-		background-color: var(--color-surface);
+		border: 1px solid var(--border-hairline);
+		background-color: var(--bg-surface);
 	}
 
 	.bone {
 		height: 0.75rem;
-		background-color: var(--color-canvas);
+		background-color: var(--bg-canvas);
 		animation: pulse 1.4s ease-in-out infinite;
 	}
 
@@ -532,9 +617,9 @@
 	.state {
 		margin: 0;
 		padding: 3rem 1.5rem;
-		border: 1px dashed var(--color-hairline);
+		border: 1px dashed var(--border-hairline);
 		text-align: center;
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 	}
 
 	.state p {
@@ -544,9 +629,9 @@
 
 	.state .empty-title {
 		margin: 0;
-		font-family: var(--font-serif);
+		font-family: var(--font-display);
 		font-size: 1.35rem;
-		color: var(--color-ink);
+		color: var(--ink-primary);
 	}
 
 	.state .reset {
@@ -554,7 +639,7 @@
 	}
 
 	.state.error {
-		color: var(--color-bordeaux);
+		color: var(--accent-bordeaux);
 	}
 
 	.demo-note {
@@ -564,14 +649,14 @@
 		margin: 1.5rem 0 0;
 		font-size: 0.8rem;
 		letter-spacing: 0.02em;
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 	}
 
 	.demo-mark {
 		width: 0.45rem;
 		height: 0.45rem;
 		border-radius: 9999px;
-		background-color: var(--color-brass);
+		background-color: var(--border-gold);
 	}
 
 	/* ---------- Breakpoints ---------- */
@@ -603,13 +688,13 @@
 			align-self: flex-end;
 		}
 
-		.grid {
+		.catalog {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 	}
 
 	@media (min-width: 1024px) {
-		.grid {
+		.catalog {
 			grid-template-columns: repeat(3, minmax(0, 1fr));
 			gap: 1.5rem;
 		}

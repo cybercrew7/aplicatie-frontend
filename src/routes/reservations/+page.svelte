@@ -8,6 +8,7 @@
 	import { userService } from '#lib/api/userService.ts';
 	import ReservationModal from '#lib/components/ReservationModal.svelte';
 	import { authStore, connectionMode } from '#lib/stores/authStore.ts';
+	import { lastCreatedReservation } from '#lib/stores/reservationStore.ts';
 	import type { ReservationDTO, ResourceDTO, UserDTO } from '#lib/types/index.ts';
 	import { isUpcoming, STATUS_LABELS } from '#lib/utils/reservation.ts';
 	import { TYPE_LABELS } from '#lib/utils/resource.ts';
@@ -115,6 +116,18 @@
 		const name = resourceById.get(created.resourceId)?.name ?? 'Resursa';
 		showToast('success', `Rezervarea pentru ${name} a fost înregistrată.`);
 	}
+
+	// Bookings made through the global drawer appear here immediately.
+	$effect(() => {
+		const created = $lastCreatedReservation;
+		if (!created) return;
+		untrack(() => {
+			if (!reservations || reservations.some((r) => r.id === created.id)) return;
+			reservations = [...reservations, created];
+			period = 'upcoming';
+			freshId = created.id;
+		});
+	});
 
 	// ---------- Cancellation ----------
 	let confirmingId = $state<number | null>(null);

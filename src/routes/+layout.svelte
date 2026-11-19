@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import favicon from '#lib/assets/favicon.svg';
+	import BookingDrawer from '#lib/components/BookingDrawer.svelte';
 	import Navbar from '#lib/components/Navbar.svelte';
 	import type { LayoutProps } from './$types';
 
@@ -11,7 +12,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>Atrium — Resource Concierge</title>
+	<title>Atrium — Gestiune Spații & Resurse</title>
 </svelte:head>
 
 <div class="shell">
@@ -26,19 +27,21 @@
 			<p>
 				<span class="footer-brand">ATRIUM</span>
 				<span class="footer-dot">·</span>
-				Gestiunea resurselor
+				<span class="footer-tag">Gestiune Spații &amp; Resurse</span>
 			</p>
 			<p>© {year} Toate drepturile rezervate.</p>
 		</div>
 	</footer>
 </div>
 
+<BookingDrawer />
+
 <style>
 	.shell {
 		display: flex;
 		flex-direction: column;
 		min-height: 100dvh;
-		background-color: var(--color-canvas);
+		background-color: var(--bg-canvas);
 	}
 
 	.content {
@@ -50,7 +53,15 @@
 	}
 
 	.footer {
-		border-top: 1px solid var(--color-hairline);
+		border-top: 1px solid var(--border-hairline);
+		background-color: var(--bg-surface);
+	}
+
+	.footer-tag {
+		font-family: var(--font-display);
+		font-size: 0.9rem;
+		font-style: italic;
+		letter-spacing: 0.02em;
 	}
 
 	.footer-inner {
@@ -63,7 +74,7 @@
 		font-size: 0.75rem;
 		line-height: 1rem;
 		letter-spacing: 0.025em;
-		color: var(--color-muted);
+		color: var(--ink-secondary);
 	}
 
 	.footer-inner p {
@@ -71,15 +82,15 @@
 	}
 
 	.footer-brand {
-		font-family: var(--font-serif);
+		font-family: var(--font-display);
 		font-size: 0.875rem;
 		letter-spacing: 0.18em;
-		color: var(--color-ink);
+		color: var(--ink-primary);
 	}
 
 	.footer-dot {
 		margin-inline: 0.5rem;
-		color: var(--color-brass);
+		color: var(--border-gold);
 	}
 
 	@media (min-width: 640px) {

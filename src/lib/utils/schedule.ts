@@ -143,3 +143,17 @@ export function calculateAvailabilitySummary(slots: readonly DaySlot[]): Availab
 		label
 	};
 }
+
+/**
+ * True when `resourceId` can be used right now: the current instant falls inside
+ * operating hours and no active reservation covers it.
+ */
+export function isFreeNow(
+	resourceId: number,
+	reservations: readonly ReservationDTO[],
+	now: number = Date.now()
+): boolean {
+	const hour = new Date(now).getHours();
+	if (hour < OPENING_HOUR || hour >= CLOSING_HOUR) return false;
+	return findConflicts(reservations, resourceId, { start: now, end: now + 1 }).length === 0;
+}
