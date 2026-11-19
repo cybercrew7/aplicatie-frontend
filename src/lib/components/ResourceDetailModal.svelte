@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { ApiError } from '#lib/api/httpClient.ts';
 	import { reservationService } from '#lib/api/reservationService.ts';
-	import type { ReservationDTO, ReservationStatus, ResourceDTO } from '#lib/types/index.ts';
+	import type { ReservationDTO, ResourceDTO } from '#lib/types/index.ts';
+	import { STATUS_LABELS } from '#lib/utils/reservation.ts';
 	import { availabilityLabel, bookingHref, seatsLabel, TYPE_LABELS } from '#lib/utils/resource.ts';
 
 	interface Props {
@@ -19,12 +20,6 @@
 	const DEFAULT_OPEN_HOUR = 8;
 	const DEFAULT_CLOSE_HOUR = 20;
 	const MIN_FREE_GAP = 30 * 60_000;
-
-	const STATUS_LABELS: Record<ReservationStatus, string> = {
-		Confirmed: 'Confirmată',
-		Pending: 'În așteptare',
-		Cancelled: 'Anulată'
-	};
 
 	const timeFmt = new Intl.DateTimeFormat('ro-RO', { hour: '2-digit', minute: '2-digit' });
 	const dayFmt = new Intl.DateTimeFormat('ro-RO', {
