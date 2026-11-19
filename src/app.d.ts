@@ -8,6 +8,11 @@ declare global {
 		// interface PageState {}
 		// interface Platform {}
 	}
+
+	interface ImportMetaEnv {
+		/** Overrides the API base URL. Defaults to `/api` (Nginx reverse proxy). */
+		readonly VITE_API_BASE_URL?: string;
+	}
 }
 
 export {};
